@@ -65,7 +65,7 @@ let(male=thread_g=="m",
 				steps=[
 					function(acc,dp) tp3d_AddLabel(acc,dp,"st"),
 					function(acc,dp) tp3d_Pivot(acc,dp,a_horz=-90),
-					function(acc,dp) tp3d_Straight(acc,dp,d= trunc*cos(30) + (1-cos(30))*sz - clr/2 ),
+					function(acc,dp) tp3d_Straight(acc,dp,d= trunc*cos(30) + (1-cos(30))*pitch - clr/2 ),
 					function(acc,dp) tp3d_Pivot(acc,dp,a_horz=-30),
 					function(acc,dp) tp3d_Straight(acc,dp,d= sz-2*trunc ),
 					function(acc,dp) tp3d_Mirror(acc,dp,stop="st",mpt=[0,0,0],mnv=[0,1,0]),
