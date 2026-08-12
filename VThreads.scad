@@ -17,6 +17,8 @@ VThreads(
 	clr=0.1,
 	//fillet_in=false,
 	//fillet_out=false,
+	//male_id=15,
+	//female_od=21.5,
 );
 
 module VThreads(
@@ -40,6 +42,10 @@ module VThreads(
 	fillet_in=true,
 	// fillet out the end of the thread
 	fillet_out=true,
+	// for male threads, include pipe wall with given inner diameter
+	male_id=0,
+	// for female threads, include pipe wall with given outer diameter
+	female_od=0,
 	// prefix for assertions
 	debug_prefix="VThreads")
 assert(is_string(thread_g) && (thread_g=="m" || thread_g=="f"),debug_prefix)
@@ -48,12 +54,15 @@ assert(is_num(trunc) && trunc>0,debug_prefix)
 assert(is_num(starts) && starts>0 && starts==round(starts),debug_prefix)
 assert(is_num(length) && length>0,debug_prefix)
 assert(is_num(clr) && clr>=0,debug_prefix)
+assert(is_num(male_id) && male_id>=0,debug_prefix)
+assert(is_num(female_od) && female_od>=0,debug_prefix)
 let(male=thread_g=="m",
+	step_a=5,
 
 	pt_st=[thread_d/2,0,0],
 	pt_a=360*length/(pitch*starts),
-	pt_n=ceil((360/5)*length/(pitch*starts)),
-	pt=TurtlePath3d(debug_prefix=str(debug_prefix," path"),start_pt=pt_st,steps=[
+	pt_n=ceil((360/step_a)*length/(pitch*starts)),
+	thr_pt=TurtlePath3d(debug_prefix=str(debug_prefix," path"),start_pt=pt_st,steps=[
 		function(acc,dp) tp3d_Turn(acc,dp,a=pt_a,r=thread_d/2,n=pt_n,dn=length),
 	]),
 
@@ -82,15 +91,33 @@ let(male=thread_g=="m",
 				]))
 		tp3d_GetPathXY(pr),
 	main_pr=threadform_prf(pitch),
-	prf=function(i)
+	thr_prf=function(i)
 		let(pct = fillet_in && i<=5 ? i/5
 				: fillet_out && (pt_n-i)<=5 ? (pt_n-i)/5
 				: 1)
 		pct==1 ? main_pr : threadform_prf(2.1*trunc+(pitch-2.1*trunc)*sin(90*pct)),
+
+	pipe_enabled=male ? male_id>0 && male_id<thread_d-pitch : female_od>thread_d+fwall_th,
+	pipe_pr= !pipe_enabled ? [] :
+		let(ix= male ? male_id/2-thread_d/2 : 0,
+			ox= male ? -pitch*cos(30) : female_od/2-thread_d/2)
+		[
+			[ix,length+pitch/2],
+			[ox,length+pitch/2],
+			[ox,-pitch/2],
+			[ix,-pitch/2],
+		],
+	pipe_pt= !pipe_enabled ? []
+		: TurtlePath3d(debug_prefix=str(debug_prefix," pipe wall path"),drop_last=true,start_pt=pt_st,steps=[
+			function(acc,dp) tp3d_Turn(acc,dp,a=360,r=pt_st.x,n=ceil(360/step_a)),
+		]),
 	)
 {
 	rotate([0,0,male?0:180/starts])
 	for(s=[1:starts])
 	rotate([0,0,(s-1)*360/starts])
-	TurtlePath3d_Sweep(debug_prefix=debug_prefix,profile=prf,path=pt);
+	TurtlePath3d_Sweep(debug_prefix=debug_prefix,profile=thr_prf,path=thr_pt);
+
+	if(pipe_enabled)
+	TurtlePath3d_Sweep(debug_prefix=str(debug_prefix," pipe wall"),profile=pipe_pr,path=pipe_pt,closure=["torus"]);
 }
