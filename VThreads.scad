@@ -9,7 +9,7 @@ for(g=["m","f"])
 VThreads(
 	thread_g=g,
 	thread_d=20,
-	fwall_th=0.2,
+	wall_ith=0.1,
 	pitch=2,
 	trunc=0.2,
 	starts=2,
@@ -26,8 +26,8 @@ module VThreads(
 	thread_g="m", // m|f
 	// thread diameter - measured as the outside diameter of the male thread, disregarding truncation and clearance
 	thread_d=20,
-	// female thread outside 'wall' thickness
-	fwall_th=0.2,
+	// thread 'wall' intersection thickness
+	wall_ith=0.1,
 	// thread pitch in mm
 	pitch=2,
 	// truncation of the thread peaks
@@ -49,6 +49,7 @@ module VThreads(
 	// prefix for assertions
 	debug_prefix="VThreads")
 assert(is_string(thread_g) && (thread_g=="m" || thread_g=="f"),debug_prefix)
+assert(is_num(wall_ith) && wall_ith>0,debug_prefix)
 assert(is_num(pitch) && pitch>0,debug_prefix)
 assert(is_num(trunc) && trunc>0,debug_prefix)
 assert(is_num(starts) && starts>0 && starts==round(starts),debug_prefix)
@@ -67,26 +68,24 @@ let(male=thread_g=="m",
 	]),
 
 	threadform_prf=function(sz)
-		let(dp=str(debug_prefix," ",thread_g," profile sz=",sz),
+		let(dp=str(debug_prefix," g=",thread_g," profile sz=",sz),
 			pr=male
 			? TurtlePath3d(debug_prefix=dp,
-				start_pt=[-pitch,sz/2-trunc/2,0],
+				start_pt=[-pitch*cos(30)-wall_ith,sz/2-clr/20,0],start_hv=[1,0,0],
 				steps=[
 					function(acc,dp) tp3d_AddLabel(acc,dp,"st"),
-					function(acc,dp) tp3d_Pivot(acc,dp,a_horz=-90),
-					function(acc,dp) tp3d_Straight(acc,dp,d= trunc*cos(30) + (1-cos(30))*pitch - clr/2 ),
+					function(acc,dp) tp3d_Straight(acc,dp,d= wall_ith + cos(30)*clr/10 - clr/2 ),
 					function(acc,dp) tp3d_Pivot(acc,dp,a_horz=-30),
-					function(acc,dp) tp3d_Straight(acc,dp,d= sz-2*trunc ),
+					function(acc,dp) tp3d_Straight(acc,dp,d= sz-trunc-clr/10 ),
 					function(acc,dp) tp3d_Mirror(acc,dp,stop="st",mpt=[0,0,0],mnv=[0,1,0]),
 				])
 			: TurtlePath3d(debug_prefix=dp,
-				start_pt=[trunc*cos(30)+clr/2-sz*cos(30),trunc/2,0],
+				start_pt=[trunc*cos(30)+clr/2-sz*cos(30),trunc/2,0],start_hv=[cos(30),sin(30),0],
 				steps=[
 					function(acc,dp) tp3d_AddLabel(acc,dp,"st"),
-					function(acc,dp) tp3d_Pivot(acc,dp,a_horz=-60),
-					function(acc,dp) tp3d_Straight(acc,dp,d= sz-2*trunc ),
+					function(acc,dp) tp3d_Straight(acc,dp,d= sz-trunc-clr/10 ),
 					function(acc,dp) tp3d_Pivot(acc,dp,a_horz=-30),
-					function(acc,dp) tp3d_Straight(acc,dp,d= trunc*cos(30) + fwall_th - clr/2 ),
+					function(acc,dp) tp3d_Straight(acc,dp,d= cos(30)*clr/10+wall_ith-clr/2 ),
 					function(acc,dp) tp3d_Mirror(acc,dp,stop="st",mpt=[0,0,0],mnv=[0,1,0]),
 				]))
 		tp3d_GetPathXY(pr),
@@ -94,13 +93,16 @@ let(male=thread_g=="m",
 	thr_prf=function(i)
 		let(pct = fillet_in && i<=5 ? i/5
 				: fillet_out && (pt_n-i)<=5 ? (pt_n-i)/5
-				: 1)
-		pct==1 ? main_pr : threadform_prf(2.1*trunc+(pitch-2.1*trunc)*sin(90*pct)),
+				: 1,
+			min_sz=trunc+1.1*clr/10)
+		pct==1 ? main_pr : threadform_prf(min_sz+(pitch-min_sz)*sin(90*pct)),
 
-	pipe_enabled=male ? male_id>0 && male_id<thread_d-pitch : female_od>thread_d+fwall_th,
+	pipe_enabled=male
+		? male_id>0 && male_id<thread_d-2*(pitch*cos(30)+wall_ith)
+		: female_od>thread_d+2*wall_ith,
 	pipe_pr= !pipe_enabled ? [] :
-		let(ix= male ? male_id/2-thread_d/2 : 0,
-			ox= male ? -pitch*cos(30) : female_od/2-thread_d/2)
+		let(ix= male ? male_id/2-thread_d/2 : clr/2-trunc*cos(30),
+			ox= male ? -(pitch-trunc)*cos(30)-clr/2 : female_od/2-thread_d/2)
 		[
 			[ix,length+pitch/2],
 			[ox,length+pitch/2],
