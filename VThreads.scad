@@ -20,16 +20,27 @@ VThreads(
 );
 
 module VThreads(
+	// "m" for male threads, "f" for female threads
 	thread_g="m", // m|f
+	// thread diameter - measured as the outside diameter of the male thread, disregarding truncation and clearance
 	thread_d=20,
+	// female thread outside 'wall' thickness
 	fwall_th=0.2,
+	// thread pitch in mm
 	pitch=2,
+	// truncation of the thread peaks
 	trunc=0.2,
+	// how many starts to use
 	starts=1,
+	// total length from peak to peak
 	length=20,
+	// clearance
 	clr=0.1,
+	// fillet in the start of the thread
 	fillet_in=true,
+	// fillet out the end of the thread
 	fillet_out=true,
+	// prefix for assertions
 	debug_prefix="VThreads")
 assert(is_string(thread_g) && (thread_g=="m" || thread_g=="f"),debug_prefix)
 assert(is_num(pitch) && pitch>0,debug_prefix)
@@ -75,7 +86,7 @@ let(male=thread_g=="m",
 		let(pct = fillet_in && i<=5 ? i/5
 				: fillet_out && (pt_n-i)<=5 ? (pt_n-i)/5
 				: 1)
-		pct==1 ? main_pr : threadform_prf(3*trunc+(pitch-3*trunc)*sin(90*pct)),
+		pct==1 ? main_pr : threadform_prf(2.1*trunc+(pitch-2.1*trunc)*sin(90*pct)),
 	)
 {
 	rotate([0,0,male?0:180/starts])
