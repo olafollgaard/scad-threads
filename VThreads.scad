@@ -5,9 +5,9 @@ use <../scad-turtlepath/TurtlePath3d.scad>;
 use <../scad-turtlepath/TurtlePath3d_Sweep.scad>;
 
 //translate([-10,0,0])
-for(g=["m","f"])
+for(k=["ext","int"])
 VThreads(
-	thread_g=g,
+	kind=k,
 	thread_d=20,
 	wall_ith=0.1,
 	pitch=2,
@@ -17,14 +17,14 @@ VThreads(
 	clr=0.1,
 	//fillet_in=false,
 	//fillet_out=false,
-	//male_id=15,
-	//female_od=21.5,
+	//inner_wall_d=15,
+	//outer_wall_d=21.5,
 );
 
 module VThreads(
-	// "m" for male threads, "f" for female threads
-	thread_g="m", // m|f
-	// thread diameter - measured as the outside diameter of the male thread, disregarding truncation and clearance
+	// "ext" for external threads, "int" for internal threads
+	kind="ext", // int|ext
+	// thread diameter - measured as the outside diameter of the external thread, disregarding truncation and clearance
 	thread_d=20,
 	// thread 'wall' intersection thickness
 	wall_ith=0.1,
@@ -42,22 +42,22 @@ module VThreads(
 	fillet_in=true,
 	// fillet out the end of the thread
 	fillet_out=true,
-	// for male threads, include pipe wall with given inner diameter
-	male_id=0,
-	// for female threads, include pipe wall with given outer diameter
-	female_od=0,
+	// for external threads, include inner pipe wall with given inner diameter
+	inner_wall_d=0,
+	// for internal threads, include outer pipe wall with given outer diameter
+	outer_wall_d=0,
 	// prefix for assertions
 	debug_prefix="VThreads")
-assert(is_string(thread_g) && (thread_g=="m" || thread_g=="f"),debug_prefix)
+assert(is_string(kind) && (kind=="ext" || kind=="int"),debug_prefix)
 assert(is_num(wall_ith) && wall_ith>0,debug_prefix)
 assert(is_num(pitch) && pitch>0,debug_prefix)
 assert(is_num(trunc) && trunc>0,debug_prefix)
 assert(is_num(starts) && starts>0 && starts==round(starts),debug_prefix)
 assert(is_num(length) && length>0,debug_prefix)
 assert(is_num(clr) && clr>=0,debug_prefix)
-assert(is_num(male_id) && male_id>=0,debug_prefix)
-assert(is_num(female_od) && female_od>=0,debug_prefix)
-let(male=thread_g=="m",
+assert(is_num(inner_wall_d) && inner_wall_d>=0,debug_prefix)
+assert(is_num(outer_wall_d) && outer_wall_d>=0,debug_prefix)
+let(isext=kind=="ext",
 	step_a=5,
 
 	pt_st=[thread_d/2,0,0],
@@ -68,8 +68,8 @@ let(male=thread_g=="m",
 	]),
 
 	threadform_prf=function(sz)
-		let(dp=str(debug_prefix," g=",thread_g," profile sz=",sz),
-			pr=male
+		let(dp=str(debug_prefix," k=",kind," profile sz=",sz),
+			pr=isext
 			? TurtlePath3d(debug_prefix=dp,
 				start_pt=[-pitch*cos(30)-wall_ith,sz/2-clr/20,0],start_hv=[1,0,0],
 				steps=[
@@ -97,12 +97,12 @@ let(male=thread_g=="m",
 			min_sz=trunc+1.1*clr/10)
 		pct==1 ? main_pr : threadform_prf(min_sz+(pitch-min_sz)*sin(90*pct)),
 
-	pipe_enabled=male
-		? male_id>0 && male_id<thread_d-2*(pitch*cos(30)+wall_ith)
-		: female_od>thread_d+2*wall_ith,
+	pipe_enabled=isext
+		? inner_wall_d>0 && inner_wall_d<thread_d-2*(pitch*cos(30)+wall_ith)
+		: outer_wall_d>thread_d+2*wall_ith,
 	pipe_pr= !pipe_enabled ? [] :
-		let(ix= male ? male_id/2-thread_d/2 : clr/2-trunc*cos(30),
-			ox= male ? -(pitch-trunc)*cos(30)-clr/2 : female_od/2-thread_d/2)
+		let(ix= isext ? inner_wall_d/2-thread_d/2 : clr/2-trunc*cos(30),
+			ox= isext ? -(pitch-trunc)*cos(30)-clr/2 : outer_wall_d/2-thread_d/2)
 		[
 			[ix,length+pitch/2],
 			[ox,length+pitch/2],
@@ -115,7 +115,7 @@ let(male=thread_g=="m",
 		]),
 	)
 {
-	rotate([0,0,male?0:180/starts])
+	rotate([0,0,isext?0:180/starts])
 	for(s=[1:starts])
 	rotate([0,0,(s-1)*360/starts])
 	TurtlePath3d_Sweep(debug_prefix=debug_prefix,profile=thr_prf,path=thr_pt);
